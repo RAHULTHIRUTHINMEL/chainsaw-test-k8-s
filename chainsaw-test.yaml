@@ -1,0 +1,31 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: ingress-test
+
+spec:
+  bindings:
+    - name: CUSTOM_URL
+      value: "foo.example.com"
+  steps:
+  - try:
+    - script:
+        content: |
+          #!/bin/bash
+          envsubst < ingress.yaml > sample_ingress.yaml
+        env:
+        - name: HOST_URL
+          value: ($CUSTOM_URL)
+    - apply:
+        file: sample_ingress.yaml
+    - assert:
+        timeout: 1m
+        resource:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: nginx-ingress
+          status:
+            loadBalancer:
+              ingress:
+                - (hostname != null) : true
